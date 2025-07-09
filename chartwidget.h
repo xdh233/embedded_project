@@ -22,8 +22,7 @@ class SingleChartWidget : public QWidget
 public:
     enum ChartType {
         TEMPERATURE = 0,
-        HUMIDITY = 1,
-        SMOKE = 2
+        HUMIDITY = 1
     };
 
     explicit SingleChartWidget(ChartType type, QWidget *parent = 0);
@@ -50,7 +49,6 @@ private:
     void drawGrid(QPainter &painter);
     void drawAxes(QPainter &painter);
     void drawData(QPainter &painter);
-    void drawLegend(QPainter &painter);
     void updateScales();
     double getValueFromData(const SensorData &data) const;
     QString getUnitString() const;
@@ -80,8 +78,6 @@ private:
     // 数据范围
     double m_minValue;
     double m_maxValue;
-    QDateTime m_minTime;
-    QDateTime m_maxTime;
 
     // 颜色配置
     QColor m_chartColor;
@@ -118,12 +114,11 @@ private:
     // UI组件
     QComboBox *m_displayModeCombo;
 
-    // 三个独立的图表
+    // 两个独立的图表
     SingleChartWidget *m_temperatureChart;
     SingleChartWidget *m_humidityChart;
-    SingleChartWidget *m_smokeChart;
 
-    // 当前显示模式：0=分离显示三个图表, 1=只显示温度, 2=只显示湿度, 3=只显示烟雾
+    // 当前显示模式：0=分离显示, 1=只显示温度, 2=只显示湿度
     int m_displayMode;
 };
 

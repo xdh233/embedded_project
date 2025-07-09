@@ -11,21 +11,24 @@ public:
     explicit SensorThread(QObject *parent = 0);
     ~SensorThread();
 
+    void startCollection();
+    void stopCollection();
+    bool isCollecting() const;  // 保持 const 修饰
+    void requestStop();
 signals:
-    void dataReceived(float temperature, float humidity, float smoke);
+    void dataReceived(float temperature, float humidity);
 
 protected:
     void run();
 
 private:
+    mutable QMutex m_mutex;  // 关键修改：添加 mutable
+    volatile bool m_collecting;  // 添加 volatile
+    volatile bool m_running;     // 添加 volatile
+    int m_sht11_fd;
+
     float readTemperature();
     float readHumidity();
-    float readSmoke();
-
-    int m_sht11_fd;  // 温湿度传感器文件描述符
-    int m_smog_fd;   // 烟雾传感器文件描述符
-    QMutex m_mutex;
-    bool running;
 };
 
 #endif // SENSORTHREAD_H

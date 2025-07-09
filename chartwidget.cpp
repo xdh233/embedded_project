@@ -12,64 +12,44 @@ SingleChartWidget::SingleChartWidget(ChartType type, QWidget *parent)
     , m_chartType(type)
     , m_realTimeMode(true)
     , m_maxDataPoints(50)
-    , m_marginLeft(80)
-    , m_marginRight(80)
-    , m_marginTop(60)
-    , m_marginBottom(80)
+    , m_marginLeft(60)  // 直接初始化为新值
+    , m_marginRight(60)
+    , m_marginTop(40)
+    , m_marginBottom(60)
     , m_minValue(0)
     , m_maxValue(100)
     , m_gridColor(QColor(220, 220, 220))
     , m_axisColor(Qt::black)
     , m_textColor(Qt::black)
 {
+    // 根据类型设置颜色
+    m_chartColor = (type == TEMPERATURE) ? Qt::red : Qt::blue;
+
     setupUI();
     setMinimumSize(300, 200);
-
-    // 根据类型设置颜色
-    switch (m_chartType) {
-        case TEMPERATURE:
-            m_chartColor = Qt::red;
-            break;
-        case HUMIDITY:
-            m_chartColor = Qt::blue;
-            break;
-        default:
-            m_chartColor = Qt::black;  // 添加这个
-            break;
-    }
 }
-
 void SingleChartWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(5);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
 
     // 标题和当前值显示
-    QHBoxLayout *headerLayout = new QHBoxLayout();
-
-    m_titleLabel = new QLabel(getTypeString());
+    m_titleLabel = new QLabel(getTypeString());  // 初始化标题标签
     m_titleLabel->setStyleSheet("font-weight: bold; font-size: 24px;");
 
     m_currentValueLabel = new QLabel("-- " + getUnitString());
     m_currentValueLabel->setStyleSheet("font-size: 24px; color: gray;");
     m_currentValueLabel->setAlignment(Qt::AlignRight);
 
+    QHBoxLayout *headerLayout = new QHBoxLayout();
+    headerLayout->setContentsMargins(0, 0, 0, 0);
     headerLayout->addWidget(m_titleLabel);
     headerLayout->addStretch();
     headerLayout->addWidget(m_currentValueLabel);
 
-    // 控制按钮和信息
-    QHBoxLayout *controlLayout = new QHBoxLayout();
-
-    m_infoLabel = new QLabel(tr("数据点: 0"));
-    m_infoLabel->setStyleSheet("font-size: 24px; color: gray;");
-
-    controlLayout->addStretch();
-    controlLayout->addWidget(m_infoLabel);
-
     mainLayout->addLayout(headerLayout);
-    mainLayout->addStretch(); // 图表绘制区域
-    mainLayout->addLayout(controlLayout);
+    mainLayout->addStretch();  // 图表绘制区域将占据剩余空间
 }
 
 void SingleChartWidget::addDataPoint(const SensorData &data)
@@ -236,10 +216,6 @@ void SingleChartWidget::drawAxes(QPainter &painter)
                 QRect textRect(x - 55, m_chartRect.bottom() + 10, 120, 25);
                 painter.drawText(textRect, Qt::AlignCenter, timeLabel);
             }
-            if (i == timeTickCount) {
-                // 最右侧的标签，向左偏移一些
-                QRect textRect(x - 80, m_chartRect.bottom() + 10, 120, 25);
-            }
         }
     }
 }
@@ -306,8 +282,6 @@ void SingleChartWidget::updateScales()
     if (m_chartType == HUMIDITY) {
         if (m_minValue < 0) m_minValue = 0;
         if (m_maxValue > 100) m_maxValue = 100;
-    } else if (m_chartType == SMOKE) {
-        if (m_minValue < 0) m_minValue = 0;
     }
 }
 
@@ -356,63 +330,58 @@ ChartWidget::ChartWidget(QWidget *parent)
 void ChartWidget::setupUI()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
 
     // 控制面板
     QHBoxLayout *controlLayout = new QHBoxLayout();
-
     controlLayout->addWidget(new QLabel(tr("显示模式:")));
 
     m_displayModeCombo = new QComboBox();
     m_displayModeCombo->addItem(tr("分离显示（推荐）"));
     m_displayModeCombo->addItem(tr("仅温度"));
     m_displayModeCombo->addItem(tr("仅湿度"));
-    m_displayModeCombo->setStyleSheet(
-                "QComboBox {"
-                "    min-width: 200px;"      // 下拉框宽度
-                "    min-height: 40px;"      // 下拉框高度
-                "    font-size: 32px;"       // 下拉框字体
-                "}"
-                "QComboBox QAbstractItemView {"
-                "    min-width: 250px;"      // 下拉列表宽度
-                "    min-height: 60px;"      // 下拉列表高度
-                "    font-size: 32px;"       // 下拉项字体
-                "}"
-            );
+    m_displayModeCombo->setStyleSheet("...");  // 保留原有样式
+
     connect(m_displayModeCombo, SIGNAL(currentIndexChanged(int)),
             this, SLOT(onChartTypeChanged()));
+
     controlLayout->addWidget(m_displayModeCombo);
-
     controlLayout->addStretch();
-
     mainLayout->addLayout(controlLayout);
 
-    // 创建两个独立的图表
+    // 创建图表区域
+    QWidget *chartsContainer = new QWidget();
+    QHBoxLayout *chartsLayout = new QHBoxLayout(chartsContainer);
+    chartsLayout->setContentsMargins(0, 0, 0, 0);
+    chartsLayout->setSpacing(10);
+
+    // 创建两个图表
     m_temperatureChart = new SingleChartWidget(SingleChartWidget::TEMPERATURE);
     m_humidityChart = new SingleChartWidget(SingleChartWidget::HUMIDITY);
 
-    // 使用网格布局来显示两个图表
-    QWidget *chartsWidget = new QWidget();
-    QGridLayout *chartsLayout = new QGridLayout(chartsWidget);
+    // 设置16:9比例 (15.5cm x 9cm)
+    const int width = static_cast<int>(15.5 * 96 / 2.54);  // 厘米转像素
+    const int height = static_cast<int>(9 * 96 / 2.54);
 
-    // 在一行中显示两个图表
-    chartsLayout->addWidget(m_temperatureChart, 0, 0);
-    chartsLayout->addWidget(m_humidityChart, 0, 1);
+    m_temperatureChart->setFixedSize(width, height);
+    m_humidityChart->setFixedSize(width, height);
 
-    mainLayout->addWidget(chartsWidget);
+    chartsLayout->addWidget(m_temperatureChart);
+    chartsLayout->addWidget(m_humidityChart);
+    mainLayout->addWidget(chartsContainer);
 }
 
 void ChartWidget::addDataPoint(const SensorData &data)
 {
-    // 只给温湿度图表添加数据（不包括烟雾）
     m_temperatureChart->addDataPoint(data);
     m_humidityChart->addDataPoint(data);
 }
 
 void ChartWidget::setChartType(int type)
 {
-    // 为了保持兼容性，映射旧的类型到新的显示模式
     m_displayMode = type;
-    if (m_displayMode > 2) m_displayMode = 0; // 限制为0-2
+    if (m_displayMode > 2) m_displayMode = 0;
 
     m_displayModeCombo->setCurrentIndex(m_displayMode);
     onChartTypeChanged();
